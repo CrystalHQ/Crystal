@@ -21,7 +21,7 @@ contract TrustGraph is ReputationValueStatefull{
     //Holds list of values (mapped sequentially to a number)
     mapping (uint => bytes32) values;
     
-    //Returns a list of all the values that an individual has been rated on (by iterating over the mapping)
+    //Returns a list of all the values that exist in the system
     function getReputationTypes() returns (bytes32[] _values) {}
     
     //Adds a new value to the system
