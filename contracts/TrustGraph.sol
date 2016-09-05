@@ -13,10 +13,9 @@ contract TrustGraph is ReputationValueStatefull{
     //Returns the Valuescore for the value a given individual in a given community
     function reputationOf (address _agent, bytes32 _rephash, uint _community) returns (uint range) {}
     
-    
     //
-    //Holds start sets
-    mapping (uint => address[]) startsets;
+    //Maps a community to it's start set of trusted agents
+    mapping (uint => address[]) communityStartSet;
     
     //Holds list of values (mapped sequentially to a number)
     mapping (uint => bytes32) values;

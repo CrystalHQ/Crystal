@@ -1,4 +1,5 @@
 var Web3 = require("web3");
+var SolidityEvent = require("web3/lib/web3/event.js");
 
 (function() {
   // Planned for future features, logging, etc.
@@ -76,7 +77,7 @@ var Web3 = require("web3");
         });
       };
     },
-    synchronizeFunction: function(fn, C) {
+    synchronizeFunction: function(fn, instance, C) {
       var self = this;
       return function() {
         var args = Array.prototype.slice.call(arguments);
@@ -92,6 +93,21 @@ var Web3 = require("web3");
 
         return new Promise(function(accept, reject) {
 
+          var decodeLogs = function(logs) {
+            return logs.map(function(log) {
+              var logABI = C.events[log.topics[0]];
+
+              if (logABI == null) {
+                return null;
+              }
+
+              var decoder = new SolidityEvent(null, logABI, instance.address);
+              return decoder.decode(log);
+            }).filter(function(log) {
+              return log != null;
+            });
+          };
+
           var callback = function(error, tx) {
             if (error != null) {
               reject(error);
@@ -106,7 +122,16 @@ var Web3 = require("web3");
                 if (err) return reject(err);
 
                 if (receipt != null) {
-                  return accept(tx, receipt);
+                  // If they've opted into next gen, return more information.
+                  if (C.next_gen == true) {
+                    return accept({
+                      tx: tx,
+                      receipt: receipt,
+                      logs: decodeLogs(receipt.logs)
+                    });
+                  } else {
+                    return accept(tx);
+                  }
                 }
 
                 if (timeout > 0 && new Date().getTime() - start > timeout) {
@@ -138,7 +163,7 @@ var Web3 = require("web3");
         if (item.constant == true) {
           instance[item.name] = Utils.promisifyFunction(contract[item.name], constructor);
         } else {
-          instance[item.name] = Utils.synchronizeFunction(contract[item.name], constructor);
+          instance[item.name] = Utils.synchronizeFunction(contract[item.name], instance, constructor);
         }
 
         instance[item.name].call = Utils.promisifyFunction(contract[item.name].call, constructor);
@@ -424,7 +449,26 @@ var Web3 = require("web3");
       }
     ],
     "unlinked_binary": "0x6060604052600080546001604060020a03191681556102d290819061002390396000f3606060405260e060020a6000350463191b70c1811461003c5780639d5b5e0a1461007c578063c45837ce14610144578063c88fa48214610194575b005b600260208190526004356000908152604090208054600182015491909201546102189260c060020a02919063ffffffff8181169164010000000090041684565b61003a6004356024356044356000805464010000000080820463ffffffff9081166001908101830267ffffffff000000001994851617808655929092041683526002602081905260409093209283018054909216909155815460c060020a860467ffffffffffffffff19909116178255818101849055600482018054918201808255909190828183801582901161025057600701600890048160070160089004836000526020600020918201910161025091905b808211156102ce5760008155600101610130565b6000805463ffffffff818116600190810163ffffffff19939093169290921780845516825260205260409020805473ffffffffffffffffffffffffffffffffffffffff191660043517905561003a565b63ffffffff60043581166000908152600260208181526040808420808401805467ffffffff000000001981166001640100000000928390048a1681019283029190911790925596871686526003909101909252909220600160c060020a0319602435169281019290925560443590820155805463ffffffff1916909117905561003a565b60408051600160c060020a0319959095168552602085019390935263ffffffff91821684840152166060830152519081900360800190f35b50505060009283525060209182902060088083049091018054919092066004026101000a63ffffffff81021990911690850217905560408051600160c060020a03198716815291820185905280517fe31aaeb24005f81b96f1dacfbf8790539880bba62adaacab9b8d993b998a3f549281900390910190a150505050565b509056",
-    "updated_at": 1471548176155
+    "updated_at": 1473028959888,
+    "events": {
+      "0xe31aaeb24005f81b96f1dacfbf8790539880bba62adaacab9b8d993b998a3f54": {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": false,
+            "name": "name",
+            "type": "bytes8"
+          },
+          {
+            "indexed": false,
+            "name": "description",
+            "type": "bytes32"
+          }
+        ],
+        "name": "NewContentType",
+        "type": "event"
+      }
+    }
   }
 };
 
@@ -470,6 +514,7 @@ var Web3 = require("web3");
     this.address         = this.prototype.address         = network.address;
     this.updated_at      = this.prototype.updated_at      = network.updated_at;
     this.links           = this.prototype.links           = network.links || {};
+    this.events          = this.prototype.events          = network.events || {};
 
     this.network_id = network_id;
   };
@@ -479,10 +524,28 @@ var Web3 = require("web3");
   };
 
   Contract.link = function(name, address) {
+    if (typeof name == "function") {
+      var contract = name;
+
+      if (contract.address == null) {
+        throw new Error("Cannot link contract without an address.");
+      }
+
+      Contract.link(contract.contract_name, contract.address);
+
+      // Merge events so this contract knows about library's events
+      Object.keys(contract.events).forEach(function(topic) {
+        Contract.events[topic] = contract.events[topic];
+      });
+
+      return;
+    }
+
     if (typeof name == "object") {
-      Object.keys(name).forEach(function(n) {
-        var a = name[n];
-        Contract.link(n, a);
+      var obj = name;
+      Object.keys(obj).forEach(function(name) {
+        var a = obj[name];
+        Contract.link(name, a);
       });
       return;
     }
@@ -491,7 +554,10 @@ var Web3 = require("web3");
   };
 
   Contract.contract_name   = Contract.prototype.contract_name   = "ReputationRegistry";
-  Contract.generated_with  = Contract.prototype.generated_with  = "3.1.2";
+  Contract.generated_with  = Contract.prototype.generated_with  = "3.2.0";
+
+  // Allow people to opt-in to breaking changes now.
+  Contract.next_gen = false;
 
   var properties = {
     binary: function() {

@@ -231,13 +231,13 @@ var SolidityEvent = require("web3/lib/web3/event.js");
 
   Contract.new = function() {
     if (this.currentProvider == null) {
-      throw new Error("ReputationMultistateStateless error: Please call setProvider() first before calling new().");
+      throw new Error("TrustGraph error: Please call setProvider() first before calling new().");
     }
 
     var args = Array.prototype.slice.call(arguments);
 
     if (!this.unlinked_binary) {
-      throw new Error("ReputationMultistateStateless error: contract binary not set. Can't deploy new instance.");
+      throw new Error("TrustGraph error: contract binary not set. Can't deploy new instance.");
     }
 
     var regex = /__[^_]+_+/g;
@@ -256,7 +256,7 @@ var SolidityEvent = require("web3/lib/web3/event.js");
         return name != arr[index + 1];
       }).join(", ");
 
-      throw new Error("ReputationMultistateStateless contains unresolved libraries. You must deploy and link the following libraries before you can deploy a new version of ReputationMultistateStateless: " + unlinked_libraries);
+      throw new Error("TrustGraph contains unresolved libraries. You must deploy and link the following libraries before you can deploy a new version of TrustGraph: " + unlinked_libraries);
     }
 
     var self = this;
@@ -297,7 +297,7 @@ var SolidityEvent = require("web3/lib/web3/event.js");
 
   Contract.at = function(address) {
     if (address == null || typeof address != "string" || address.length != 42) {
-      throw new Error("Invalid address passed to ReputationMultistateStateless.at(): " + address);
+      throw new Error("Invalid address passed to TrustGraph.at(): " + address);
     }
 
     var contract_class = this.web3.eth.contract(this.abi);
@@ -308,7 +308,7 @@ var SolidityEvent = require("web3/lib/web3/event.js");
 
   Contract.deployed = function() {
     if (!this.address) {
-      throw new Error("Cannot find deployed address: ReputationMultistateStateless not deployed or address not set.");
+      throw new Error("Cannot find deployed address: TrustGraph not deployed or address not set.");
     }
 
     return this.at(this.address);
@@ -353,15 +353,27 @@ var SolidityEvent = require("web3/lib/web3/event.js");
         "constant": false,
         "inputs": [
           {
-            "name": "id",
+            "name": "rating",
+            "type": "int256"
+          },
+          {
+            "name": "_ratee",
+            "type": "address"
+          },
+          {
+            "name": "_valuename",
+            "type": "bytes32"
+          },
+          {
+            "name": "_community",
             "type": "uint256"
           }
         ],
-        "name": "lookup",
+        "name": "rateUser",
         "outputs": [
           {
-            "name": "adr",
-            "type": "address"
+            "name": "success",
+            "type": "bool"
           }
         ],
         "type": "function"
@@ -372,13 +384,71 @@ var SolidityEvent = require("web3/lib/web3/event.js");
           {
             "name": "_content",
             "type": "uint256"
+          },
+          {
+            "name": "_rephash",
+            "type": "bytes32"
+          },
+          {
+            "name": "_community",
+            "type": "uint256"
           }
         ],
         "name": "ratingOf",
         "outputs": [
           {
-            "name": "state",
-            "type": "uint8"
+            "name": "range",
+            "type": "uint256"
+          }
+        ],
+        "type": "function"
+      },
+      {
+        "constant": true,
+        "inputs": [
+          {
+            "name": "_value",
+            "type": "bytes32"
+          }
+        ],
+        "name": "maximumValueOf",
+        "outputs": [
+          {
+            "name": "max",
+            "type": "int256"
+          }
+        ],
+        "type": "function"
+      },
+      {
+        "constant": true,
+        "inputs": [
+          {
+            "name": "_rephash",
+            "type": "bytes32"
+          },
+          {
+            "name": "_community",
+            "type": "uint256"
+          }
+        ],
+        "name": "maximumValueOf",
+        "outputs": [
+          {
+            "name": "maximum",
+            "type": "int256"
+          }
+        ],
+        "type": "function"
+      },
+      {
+        "constant": false,
+        "inputs": [],
+        "name": "getReputationTypes",
+        "outputs": [
+          {
+            "name": "_values",
+            "type": "bytes32[]"
           }
         ],
         "type": "function"
@@ -389,21 +459,113 @@ var SolidityEvent = require("web3/lib/web3/event.js");
           {
             "name": "_agent",
             "type": "address"
+          },
+          {
+            "name": "_rephash",
+            "type": "bytes32"
+          },
+          {
+            "name": "_community",
+            "type": "uint256"
           }
         ],
         "name": "reputationOf",
         "outputs": [
           {
-            "name": "state",
-            "type": "uint8"
+            "name": "range",
+            "type": "uint256"
+          }
+        ],
+        "type": "function"
+      },
+      {
+        "constant": false,
+        "inputs": [
+          {
+            "name": "_hash",
+            "type": "bytes32"
+          }
+        ],
+        "name": "addReputationType",
+        "outputs": [
+          {
+            "name": "success",
+            "type": "bool"
+          }
+        ],
+        "type": "function"
+      },
+      {
+        "constant": false,
+        "inputs": [
+          {
+            "name": "rating",
+            "type": "int256"
+          },
+          {
+            "name": "_content",
+            "type": "uint256"
+          },
+          {
+            "name": "_rephash",
+            "type": "bytes32"
+          },
+          {
+            "name": "_community",
+            "type": "uint256"
+          }
+        ],
+        "name": "rateContent",
+        "outputs": [
+          {
+            "name": "success",
+            "type": "bool"
+          }
+        ],
+        "type": "function"
+      },
+      {
+        "constant": true,
+        "inputs": [
+          {
+            "name": "_rephash",
+            "type": "bytes32"
+          },
+          {
+            "name": "_community",
+            "type": "uint256"
+          }
+        ],
+        "name": "minimumValueOf",
+        "outputs": [
+          {
+            "name": "minimum",
+            "type": "int256"
+          }
+        ],
+        "type": "function"
+      },
+      {
+        "constant": true,
+        "inputs": [
+          {
+            "name": "_value",
+            "type": "bytes32"
+          }
+        ],
+        "name": "minimumValueOf",
+        "outputs": [
+          {
+            "name": "min",
+            "type": "int256"
           }
         ],
         "type": "function"
       }
     ],
-    "unlinked_binary": "0x60606040526000805461ff0019168155607e908190601c90396000f3606060405260e060020a60003504630a874df68114602e578063b39b782014603a578063db89c04414603a575b005b60436004355b50600090565b606c6004356034565b6040805173ffffffffffffffffffffffffffffffffffffffff9092168252519081900360200190f35b60408051918252519081900360200190f3",
-    "updated_at": 1473028959867,
-    "events": {}
+    "unlinked_binary": "0x60606040526000805461ff00191661010017815561012390819061002290396000f3606060405236156100825760e060020a600035046302837e908114610084578063070606461461009b578063143640fd146100af5780632b9c62d1146100c45780632cfca700146100cb578063627c3e3e146100c45780637995581914610084578063bc68c8b214610107578063e34377a6146100c4578063e989780e1461011b575b005b60005b604080519115158252519081900360200190f35b6100b26004356024356044355b6000610002565b60015b60408051918252519081900360200190f35b60006100b2565b60806040526000606090815260206080908152600060a0819052819060c090829080838184816004600ff1509050019250505060405180910390f35b6100876004356024356044356064356100a8565b6000196100b256",
+    "events": {},
+    "updated_at": 1473036398526
   }
 };
 
@@ -488,7 +650,7 @@ var SolidityEvent = require("web3/lib/web3/event.js");
     Contract.links[name] = address;
   };
 
-  Contract.contract_name   = Contract.prototype.contract_name   = "ReputationMultistateStateless";
+  Contract.contract_name   = Contract.prototype.contract_name   = "TrustGraph";
   Contract.generated_with  = Contract.prototype.generated_with  = "3.2.0";
 
   // Allow people to opt-in to breaking changes now.
@@ -528,6 +690,6 @@ var SolidityEvent = require("web3/lib/web3/event.js");
   } else {
     // There will only be one version of this contract in the browser,
     // and we can use that.
-    window.ReputationMultistateStateless = Contract;
+    window.TrustGraph = Contract;
   }
 })();
