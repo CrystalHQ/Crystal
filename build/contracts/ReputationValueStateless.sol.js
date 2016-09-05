@@ -1,4 +1,5 @@
 var Web3 = require("web3");
+var SolidityEvent = require("web3/lib/web3/event.js");
 
 (function() {
   // Planned for future features, logging, etc.
@@ -76,7 +77,7 @@ var Web3 = require("web3");
         });
       };
     },
-    synchronizeFunction: function(fn, C) {
+    synchronizeFunction: function(fn, instance, C) {
       var self = this;
       return function() {
         var args = Array.prototype.slice.call(arguments);
@@ -92,6 +93,21 @@ var Web3 = require("web3");
 
         return new Promise(function(accept, reject) {
 
+          var decodeLogs = function(logs) {
+            return logs.map(function(log) {
+              var logABI = C.events[log.topics[0]];
+
+              if (logABI == null) {
+                return null;
+              }
+
+              var decoder = new SolidityEvent(null, logABI, instance.address);
+              return decoder.decode(log);
+            }).filter(function(log) {
+              return log != null;
+            });
+          };
+
           var callback = function(error, tx) {
             if (error != null) {
               reject(error);
@@ -106,7 +122,16 @@ var Web3 = require("web3");
                 if (err) return reject(err);
 
                 if (receipt != null) {
-                  return accept(tx, receipt);
+                  // If they've opted into next gen, return more information.
+                  if (C.next_gen == true) {
+                    return accept({
+                      tx: tx,
+                      receipt: receipt,
+                      logs: decodeLogs(receipt.logs)
+                    });
+                  } else {
+                    return accept(tx);
+                  }
                 }
 
                 if (timeout > 0 && new Date().getTime() - start > timeout) {
@@ -138,7 +163,7 @@ var Web3 = require("web3");
         if (item.constant == true) {
           instance[item.name] = Utils.promisifyFunction(contract[item.name], constructor);
         } else {
-          instance[item.name] = Utils.synchronizeFunction(contract[item.name], constructor);
+          instance[item.name] = Utils.synchronizeFunction(contract[item.name], instance, constructor);
         }
 
         instance[item.name].call = Utils.promisifyFunction(contract[item.name].call, constructor);
@@ -325,34 +350,18 @@ var Web3 = require("web3");
   "default": {
     "abi": [
       {
-        "constant": true,
-        "inputs": [],
-        "name": "minimumValueOf",
-        "outputs": [
-          {
-            "name": "minimum",
-            "type": "uint256"
-          }
-        ],
-        "type": "function"
-      },
-      {
-        "constant": true,
-        "inputs": [],
-        "name": "maximumValueOf",
-        "outputs": [
-          {
-            "name": "maximum",
-            "type": "uint256"
-          }
-        ],
-        "type": "function"
-      },
-      {
         "constant": false,
         "inputs": [
           {
             "name": "_content",
+            "type": "uint256"
+          },
+          {
+            "name": "_rephash",
+            "type": "bytes32"
+          },
+          {
+            "name": "_community",
             "type": "uint256"
           }
         ],
@@ -366,11 +375,52 @@ var Web3 = require("web3");
         "type": "function"
       },
       {
+        "constant": true,
+        "inputs": [
+          {
+            "name": "_rephash",
+            "type": "bytes32"
+          },
+          {
+            "name": "_community",
+            "type": "uint256"
+          }
+        ],
+        "name": "maximumValueOf",
+        "outputs": [
+          {
+            "name": "maximum",
+            "type": "int256"
+          }
+        ],
+        "type": "function"
+      },
+      {
+        "constant": false,
+        "inputs": [],
+        "name": "getReputationTypes",
+        "outputs": [
+          {
+            "name": "hash",
+            "type": "bytes32[]"
+          }
+        ],
+        "type": "function"
+      },
+      {
         "constant": false,
         "inputs": [
           {
             "name": "_agent",
             "type": "address"
+          },
+          {
+            "name": "_rephash",
+            "type": "bytes32"
+          },
+          {
+            "name": "_community",
+            "type": "uint256"
           }
         ],
         "name": "reputationOf",
@@ -381,10 +431,32 @@ var Web3 = require("web3");
           }
         ],
         "type": "function"
+      },
+      {
+        "constant": true,
+        "inputs": [
+          {
+            "name": "_rephash",
+            "type": "bytes32"
+          },
+          {
+            "name": "_community",
+            "type": "uint256"
+          }
+        ],
+        "name": "minimumValueOf",
+        "outputs": [
+          {
+            "name": "minimum",
+            "type": "int256"
+          }
+        ],
+        "type": "function"
       }
     ],
-    "unlinked_binary": "0x60606040526000805461ff001916610100178155604c908190602090396000f3606060405260e060020a600035046302dd0482811460385780633c5b7d9b146038578063b39b7820146038578063db89c044146038575b005b600060408051918252519081900360200190f3",
-    "updated_at": 1471550324558
+    "unlinked_binary": "0x60606040526000805461ff0019166101001781556092908190602090396000f3606060405260e060020a600035046307060646811460425780632b9c62d11460425780632cfca700146056578063627c3e3e146042578063e34377a6146042575b005b600060408051918252519081900360200190f35b60806040526000606090815260206080908152600060a0819052819060c090829080838184816004600ff1509050019250505060405180910390f3",
+    "updated_at": 1473036398540,
+    "events": {}
   }
 };
 
@@ -430,6 +502,7 @@ var Web3 = require("web3");
     this.address         = this.prototype.address         = network.address;
     this.updated_at      = this.prototype.updated_at      = network.updated_at;
     this.links           = this.prototype.links           = network.links || {};
+    this.events          = this.prototype.events          = network.events || {};
 
     this.network_id = network_id;
   };
@@ -439,10 +512,28 @@ var Web3 = require("web3");
   };
 
   Contract.link = function(name, address) {
+    if (typeof name == "function") {
+      var contract = name;
+
+      if (contract.address == null) {
+        throw new Error("Cannot link contract without an address.");
+      }
+
+      Contract.link(contract.contract_name, contract.address);
+
+      // Merge events so this contract knows about library's events
+      Object.keys(contract.events).forEach(function(topic) {
+        Contract.events[topic] = contract.events[topic];
+      });
+
+      return;
+    }
+
     if (typeof name == "object") {
-      Object.keys(name).forEach(function(n) {
-        var a = name[n];
-        Contract.link(n, a);
+      var obj = name;
+      Object.keys(obj).forEach(function(name) {
+        var a = obj[name];
+        Contract.link(name, a);
       });
       return;
     }
@@ -451,7 +542,10 @@ var Web3 = require("web3");
   };
 
   Contract.contract_name   = Contract.prototype.contract_name   = "ReputationValueStateless";
-  Contract.generated_with  = Contract.prototype.generated_with  = "3.1.2";
+  Contract.generated_with  = Contract.prototype.generated_with  = "3.2.0";
+
+  // Allow people to opt-in to breaking changes now.
+  Contract.next_gen = false;
 
   var properties = {
     binary: function() {

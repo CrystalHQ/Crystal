@@ -231,13 +231,13 @@ var SolidityEvent = require("web3/lib/web3/event.js");
 
   Contract.new = function() {
     if (this.currentProvider == null) {
-      throw new Error("ReputationMultistateStateless error: Please call setProvider() first before calling new().");
+      throw new Error("Token error: Please call setProvider() first before calling new().");
     }
 
     var args = Array.prototype.slice.call(arguments);
 
     if (!this.unlinked_binary) {
-      throw new Error("ReputationMultistateStateless error: contract binary not set. Can't deploy new instance.");
+      throw new Error("Token error: contract binary not set. Can't deploy new instance.");
     }
 
     var regex = /__[^_]+_+/g;
@@ -256,7 +256,7 @@ var SolidityEvent = require("web3/lib/web3/event.js");
         return name != arr[index + 1];
       }).join(", ");
 
-      throw new Error("ReputationMultistateStateless contains unresolved libraries. You must deploy and link the following libraries before you can deploy a new version of ReputationMultistateStateless: " + unlinked_libraries);
+      throw new Error("Token contains unresolved libraries. You must deploy and link the following libraries before you can deploy a new version of Token: " + unlinked_libraries);
     }
 
     var self = this;
@@ -297,7 +297,7 @@ var SolidityEvent = require("web3/lib/web3/event.js");
 
   Contract.at = function(address) {
     if (address == null || typeof address != "string" || address.length != 42) {
-      throw new Error("Invalid address passed to ReputationMultistateStateless.at(): " + address);
+      throw new Error("Invalid address passed to Token.at(): " + address);
     }
 
     var contract_class = this.web3.eth.contract(this.abi);
@@ -308,7 +308,7 @@ var SolidityEvent = require("web3/lib/web3/event.js");
 
   Contract.deployed = function() {
     if (!this.address) {
-      throw new Error("Cannot find deployed address: ReputationMultistateStateless not deployed or address not set.");
+      throw new Error("Cannot find deployed address: Token not deployed or address not set.");
     }
 
     return this.at(this.address);
@@ -353,15 +353,31 @@ var SolidityEvent = require("web3/lib/web3/event.js");
         "constant": false,
         "inputs": [
           {
-            "name": "id",
+            "name": "_spender",
+            "type": "address"
+          },
+          {
+            "name": "_value",
             "type": "uint256"
           }
         ],
-        "name": "lookup",
+        "name": "approve",
         "outputs": [
           {
-            "name": "adr",
-            "type": "address"
+            "name": "success",
+            "type": "bool"
+          }
+        ],
+        "type": "function"
+      },
+      {
+        "constant": true,
+        "inputs": [],
+        "name": "totalSupply",
+        "outputs": [
+          {
+            "name": "",
+            "type": "uint256"
           }
         ],
         "type": "function"
@@ -370,15 +386,40 @@ var SolidityEvent = require("web3/lib/web3/event.js");
         "constant": false,
         "inputs": [
           {
-            "name": "_content",
+            "name": "_from",
+            "type": "address"
+          },
+          {
+            "name": "_to",
+            "type": "address"
+          },
+          {
+            "name": "_value",
             "type": "uint256"
           }
         ],
-        "name": "ratingOf",
+        "name": "transferFrom",
         "outputs": [
           {
-            "name": "state",
-            "type": "uint8"
+            "name": "success",
+            "type": "bool"
+          }
+        ],
+        "type": "function"
+      },
+      {
+        "constant": true,
+        "inputs": [
+          {
+            "name": "_owner",
+            "type": "address"
+          }
+        ],
+        "name": "balanceOf",
+        "outputs": [
+          {
+            "name": "balance",
+            "type": "uint256"
           }
         ],
         "type": "function"
@@ -387,23 +428,136 @@ var SolidityEvent = require("web3/lib/web3/event.js");
         "constant": false,
         "inputs": [
           {
-            "name": "_agent",
+            "name": "_to",
             "type": "address"
+          },
+          {
+            "name": "_value",
+            "type": "uint256"
           }
         ],
-        "name": "reputationOf",
+        "name": "transfer",
         "outputs": [
           {
-            "name": "state",
-            "type": "uint8"
+            "name": "success",
+            "type": "bool"
           }
         ],
         "type": "function"
+      },
+      {
+        "constant": true,
+        "inputs": [
+          {
+            "name": "_owner",
+            "type": "address"
+          },
+          {
+            "name": "_spender",
+            "type": "address"
+          }
+        ],
+        "name": "allowance",
+        "outputs": [
+          {
+            "name": "remaining",
+            "type": "uint256"
+          }
+        ],
+        "type": "function"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": true,
+            "name": "_from",
+            "type": "address"
+          },
+          {
+            "indexed": true,
+            "name": "_to",
+            "type": "address"
+          },
+          {
+            "indexed": false,
+            "name": "_value",
+            "type": "uint256"
+          }
+        ],
+        "name": "Transfer",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": true,
+            "name": "_owner",
+            "type": "address"
+          },
+          {
+            "indexed": true,
+            "name": "_spender",
+            "type": "address"
+          },
+          {
+            "indexed": false,
+            "name": "_value",
+            "type": "uint256"
+          }
+        ],
+        "name": "Approval",
+        "type": "event"
       }
     ],
-    "unlinked_binary": "0x60606040526000805461ff0019168155607e908190601c90396000f3606060405260e060020a60003504630a874df68114602e578063b39b782014603a578063db89c04414603a575b005b60436004355b50600090565b606c6004356034565b6040805173ffffffffffffffffffffffffffffffffffffffff9092168252519081900360200190f35b60408051918252519081900360200190f3",
-    "updated_at": 1473028959867,
-    "events": {}
+    "events": {
+      "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef": {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": true,
+            "name": "_from",
+            "type": "address"
+          },
+          {
+            "indexed": true,
+            "name": "_to",
+            "type": "address"
+          },
+          {
+            "indexed": false,
+            "name": "_value",
+            "type": "uint256"
+          }
+        ],
+        "name": "Transfer",
+        "type": "event"
+      },
+      "0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925": {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": true,
+            "name": "_owner",
+            "type": "address"
+          },
+          {
+            "indexed": true,
+            "name": "_spender",
+            "type": "address"
+          },
+          {
+            "indexed": false,
+            "name": "_value",
+            "type": "uint256"
+          }
+        ],
+        "name": "Approval",
+        "type": "event"
+      }
+    },
+    "updated_at": 1473036398525
   }
 };
 
@@ -488,7 +642,7 @@ var SolidityEvent = require("web3/lib/web3/event.js");
     Contract.links[name] = address;
   };
 
-  Contract.contract_name   = Contract.prototype.contract_name   = "ReputationMultistateStateless";
+  Contract.contract_name   = Contract.prototype.contract_name   = "Token";
   Contract.generated_with  = Contract.prototype.generated_with  = "3.2.0";
 
   // Allow people to opt-in to breaking changes now.
@@ -528,6 +682,6 @@ var SolidityEvent = require("web3/lib/web3/event.js");
   } else {
     // There will only be one version of this contract in the browser,
     // and we can use that.
-    window.ReputationMultistateStateless = Contract;
+    window.Token = Contract;
   }
 })();
