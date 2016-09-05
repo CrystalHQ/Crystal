@@ -1,4 +1,5 @@
 //Holds information abuot the trust graph and trust values, which are computed by values.js
+import "ReputationValueStatefull.sol";
 contract TrustGraph is ReputationValueStatefull{
 
     //Basic values for reputation standard.
@@ -9,12 +10,16 @@ contract TrustGraph is ReputationValueStatefull{
         max = 1;
     }
     
+    //Returns the Valuescore for the value a given individual in a given community
+    function reputationOf (address _agent, bytes32 _rephash, uint _community) returns (uint range) {}
+    
+    
     //
     //Holds start sets
-    mapping (uint community => address[] startset) startsets;
+    mapping (uint => address[]) startsets;
     
     //Holds list of values (mapped sequentially to a number)
-    mapping (uint valueID => bytes32 value) values;
+    mapping (uint => bytes32) values;
     
     //Returns a list of all the values that an individual has been rated on (by iterating over the mapping)
     function getReputationTypes() returns (bytes32[] _values) {}
@@ -25,10 +30,7 @@ contract TrustGraph is ReputationValueStatefull{
     //Allows an individual to rate another individual in a specific value.  The rating must be between -1 and 1
     function rateUser(int rating, address _ratee, bytes32 _valuename, uint _community) returns (bool success) {}
    
-   //This is part of our standard but doesn't exist for this reputation type. We should split the reputation types in the future to content ratings and user ratings to avoid useless functions like this 
+   //These are part of our standard but don't exist for this reputation type. We should split the reputation types in the future to content ratings and user ratings to avoid useless functions like this 
     function rateContent(int rating, uint _content, bytes32 _rephash, uint _community) returns (bool success) {throw;}
-    
-    //Gets the valuescore of an individual, this is actually calculated offchain for the Proof of Concept and is simply data here
-    function reputationOf (address _agent, bytes32 _rephash, _uint _community) returns (uint range) {}
-    
+    function ratingOf(uint _content, bytes32 _rephash, uint _community) returns (uint range) {throw;}
 }

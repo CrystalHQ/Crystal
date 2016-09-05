@@ -1,6 +1,7 @@
 //Contract that defines standard for statefull reputation that can be updated by giving numerical values to content or users.
 import "./ReputationValueStateless.sol";
 contract ReputationValueStatefull is ReputationValueStateless{
+    
     //Function that allows a user to add a new type of reputation to a contract.
     function addReputationType(bytes32 _hash) returns (bool success) {}
     
